@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frequência UBS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --verde: #00875A; --verde-light: #E3F5EE; --verde-mid: #00A66C; --verde-dark: #006644;
+    --azul: #0057B8; --azul-light: #E8F0FB;
+    --cinza-bg: #F2F4F7; --cinza-borda: #DDE1E7; --cinza-texto: #6B7280; --cinza-card: #FAFBFC;
+    --texto: #1A1F2E; --vermelho: #D93025;
+    --radius: 12px; --shadow: 0 1px 8px rgba(0,0,0,0.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cinza-bg); color: var(--texto); min-height: 100vh; }
+
+  .header { background: var(--verde); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,100,68,0.35); }
+  .header-left { display: flex; align-items: center; gap: 11px; }
+  .header-icon { width: 34px; height: 34px; background: rgba(255,255,255,0.2); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .header-title { color: white; font-size: 16px; font-weight: 600; }
+  .header-sub { color: rgba(255,255,255,0.7); font-size: 11px; }
+  .badge-ubs { background: rgba(255,255,255,0.18); color: white; font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 20px; font-family: 'DM Mono', monospace; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background 0.2s; }
+  .badge-ubs:hover { background: rgba(255,255,255,0.28); }
+
+  .nav-tabs { background: white; display: flex; border-bottom: 2px solid var(--cinza-borda); position: sticky; top: 62px; z-index: 99; }
+  .tab { flex: 1; padding: 13px 8px; text-align: center; font-size: 13px; font-weight: 500; color: var(--cinza-texto); cursor: pointer; border-bottom: 2.5px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; user-select: none; }
+  .tab.active { color: var(--verde); border-bottom-color: var(--verde); font-weight: 600; }
+  .tab-badge { background: var(--vermelho); color: white; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; display: none; }
+  .tab-badge.show { display: inline; }
+
+  .main { padding: 14px; max-width: 480px; margin: 0 auto; }
+  .view { display: none; animation: fadeUp 0.22s ease; }
+  .view.active { display: block; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+  .card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; }
+  .card-header { padding: 13px 16px; border-bottom: 1px solid var(--cinza-borda); display: flex; align-items: center; gap: 10px; }
+  .card-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .card-header h2 { font-size: 14px; font-weight: 600; }
+  .card-header p { font-size: 11px; color: var(--cinza-texto); margin-top: 1px; }
+  .card-body { padding: 16px; }
+
+  .sec { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--cinza-texto); margin: 18px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .sec:first-child { margin-top: 0; }
+  .sec::after { content: ''; flex: 1; height: 1px; background: var(--cinza-borda); }
+
+  .field { margin-bottom: 13px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--cinza-texto); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+  .hint-tag { font-size: 10px; font-weight: 500; color: var(--verde); background: var(--verde-light); padding: 2px 7px; border-radius: 8px; text-transform: none; letter-spacing: 0; display: none; align-items: center; gap: 3px; }
+  .hint-tag.show { display: flex; }
+
+  .input, .select {
+    width: 100%; padding: 13px 14px;
+    border: 1.5px solid var(--cinza-borda); border-radius: 10px;
+    font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--texto);
+    background: white; transition: border-color 0.18s, box-shadow 0.18s;
+    -webkit-appearance: none; appearance: none;
+  }
+  .input:focus, .select:focus { outline: none; border-color: var(--verde); box-shadow: 0 0 0 3px rgba(0,135,90,0.1); }
+  .input.soft { background: var(--verde-light); border-color: #9DD4BA; color: var(--verde-dark); font-weight: 500; }
+  .select.soft { background: var(--verde-light); border-color: #9DD4BA; color: var(--verde-dark); font-weight: 500; }
+  .input[type="datetime-local"] { font-family: 'DM Mono', monospace; font-size: 14px; }
+  .select-wrap { position: relative; }
+  .select-wrap::after { content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--cinza-texto); pointer-events: none; font-size: 12px; }
+  .select { padding-right: 36px; cursor: pointer; }
+
+  .ac-banner { display: none; align-items: center; gap: 7px; margin: 8px 0 4px; padding: 9px 12px; background: var(--verde-light); border-radius: 8px; font-size: 12px; color: var(--verde-dark); font-weight: 500; border-left: 3px solid var(--verde); }
+  .ac-banner.show { display: flex; }
+
+  /* Spinner dentro do campo */
+  .field-loading { position: relative; }
+  .field-loading::after { content: ''; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; border: 2px solid var(--cinza-borda); border-top-color: var(--verde); border-radius: 50%; animation: sp 0.6s linear infinite; }
+  @keyframes sp { to { transform: translateY(-50%) rotate(360deg); } }
+
+  .aluno-block { border: 1.5px solid var(--cinza-borda); border-radius: 10px; padding: 14px; margin-bottom: 10px; background: var(--cinza-card); position: relative; }
+  .aluno-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: var(--verde); color: white; border-radius: 6px; font-size: 11px; font-weight: 700; font-family: 'DM Mono', monospace; margin-bottom: 12px; }
+  .aluno-remove { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border: none; background: #FFE8E8; color: var(--vermelho); border-radius: 7px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
+  .counter { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 9px 12px; background: var(--cinza-bg); border-radius: 8px; }
+  .counter span:first-child { font-size: 12px; color: var(--cinza-texto); }
+  .counter span:last-child { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600; color: var(--verde); }
+
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 18px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.18s; }
+  .btn-add { width: 100%; background: var(--verde-light); color: var(--verde); border: 1.5px dashed #9DD4BA; margin-top: 4px; }
+  .btn-add:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { width: 100%; background: var(--verde); color: white; font-size: 15px; padding: 15px; border-radius: 12px; }
+  .btn-primary:hover { background: var(--verde-mid); box-shadow: 0 4px 16px rgba(0,135,90,0.28); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
+  .btn-saida { background: var(--azul); color: white; padding: 13px 18px; font-size: 14px; border-radius: 10px; flex-shrink: 0; }
+  .btn-saida:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* SAÍDA */
+  .session-card { background: var(--verde); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; box-shadow: 0 3px 12px rgba(0,100,68,0.25); }
+  .session-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+  .session-label { color: rgba(255,255,255,0.75); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }
+  .session-value { color: white; font-size: 15px; font-weight: 600; }
+  .session-change { background: rgba(255,255,255,0.18); color: white; border: none; border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+  .session-divider { height: 1px; background: rgba(255,255,255,0.2); margin: 12px 0; }
+  .session-row { display: flex; gap: 10px; }
+  .session-pill { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 7px 12px; flex: 1; }
+
+  .info-strip { background: var(--verde-light); border-left: 3px solid var(--verde); padding: 9px 13px; border-radius: 0 8px 8px 0; font-size: 12px; color: var(--verde-dark); font-weight: 500; margin-bottom: 14px; }
+  .sa-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .sa-btn { font-size: 12px; font-weight: 600; color: var(--azul); background: none; border: none; cursor: pointer; padding: 4px 0; }
+  .sa-date { font-size: 12px; color: var(--cinza-texto); }
+
+  .pend-item { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 1.5px solid var(--cinza-borda); border-radius: 10px; background: white; cursor: pointer; margin-bottom: 8px; transition: all 0.15s; user-select: none; }
+  .pend-item.sel { border-color: var(--azul); background: var(--azul-light); }
+  .chk { width: 22px; height: 22px; border: 2px solid var(--cinza-borda); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; transition: all 0.15s; }
+  .pend-item.sel .chk { background: var(--azul); border-color: var(--azul); color: white; }
+  .pend-info { flex: 1; min-width: 0; }
+  .pend-nome { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pend-ra { font-size: 11px; color: var(--cinza-texto); font-family: 'DM Mono', monospace; margin-top: 1px; }
+  .pend-hora { font-size: 11px; font-family: 'DM Mono', monospace; background: var(--verde-light); color: var(--verde-dark); padding: 3px 8px; border-radius: 6px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+
+  .bulk { margin-top: 14px; padding: 14px; background: var(--cinza-bg); border-radius: 10px; border: 1.5px solid var(--cinza-borda); transition: background 0.2s, border-color 0.2s; }
+  .bulk.on { background: #EEF4FF; border-color: #C0D3F0; }
+  .bulk-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .bulk-top span:first-child { font-size: 13px; font-weight: 600; }
+  .bulk-top span:last-child { font-size: 12px; color: var(--cinza-texto); }
+  .bulk-row { display: flex; gap: 10px; }
+  .bulk-row .input { flex: 1; font-family: 'DM Mono', monospace; font-size: 14px; }
+
+  .no-session { text-align: center; padding: 36px 20px; }
+  .no-session-icon { font-size: 42px; margin-bottom: 14px; }
+  .no-session h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .no-session p { font-size: 13px; color: var(--cinza-texto); margin-bottom: 20px; line-height: 1.5; }
+  .btn-go { background: var(--verde); color: white; padding: 13px 24px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+
+  .empty { text-align: center; padding: 36px 20px; color: var(--cinza-texto); }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+  .empty h3 { font-size: 15px; font-weight: 600; color: var(--texto); margin-bottom: 4px; }
+  .empty p { font-size: 13px; }
+
+  /* MODAL */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
+  .overlay.show { display: flex; }
+  .modal { background: white; border-radius: 20px 20px 0 0; padding: 24px 20px 32px; width: 100%; max-width: 480px; animation: slideUp 0.25s ease; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .modal p { font-size: 12px; color: var(--cinza-texto); margin-bottom: 18px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label { display: block; font-size: 11px; font-weight: 600; color: var(--cinza-texto); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 6px; }
+  .btn-cancel { flex: 1; background: var(--cinza-bg); color: var(--cinza-texto); border: none; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+  .btn-confirm { flex: 2; background: var(--verde); color: white; border: none; padding: 13px; border-radius: 10px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1F2E; color: white; padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,0.18); transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); z-index: 9999; max-width: 90vw; text-align: center; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.ok  { background: var(--verde); }
+  .toast.err { background: var(--vermelho); }
+  .toast.warn{ background: #D97706; }
+
+  .spin { display: inline-block; width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: sp 0.6s linear infinite; }
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-icon">🏥</div>
+    <div>
+      <div class="header-title">Frequência UBS</div>
+      <div class="header-sub">Registro de Estagiários</div>
+    </div>
+  </div>
+  <div class="badge-ubs" id="badgeUbs" onclick="abrirModal()" title="Alterar sessão">—</div>
+</div>
+
+<!-- ===== TABS ===== -->
+<div class="nav-tabs">
+  <div class="tab active" id="tab-entrada" onclick="switchTab('entrada')">✏️ Entrada</div>
+  <div class="tab" id="tab-saida" onclick="switchTab('saida')">
+    ✅ Saída <span class="tab-badge" id="badgePend"></span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ========== ENTRADA ========== -->
+  <div class="view active" id="view-entrada">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#E3F5EE">🏥</div>
+        <div><h2>Identificação</h2><p>Unidade e Preceptor responsável</p></div>
+      </div>
+      <div class="card-body">
+
+        <div class="sec">Unidade de Saúde</div>
+        <div class="field">
+          <label>Unidade</label>
+          <div class="select-wrap">
+            <select class="select" id="selUnidade" onchange="onUnidade()">
+              <option value="">Selecione a unidade...</option>
+              <optgroup label="CAPS">
+                <option>CAPS INFANTIL — AUXILIO</option>
+                <option>CAPS II — NORTE</option>
+                <option>CAPS III — ADULTO</option>
+                <option>CAPS AD III — PSICOSSOCIAL</option>
+              </optgroup>
+              <optgroup label="UBS">
+                <option>UBS ÁGUA LIMPA</option>
+                <option>UBS AGUAS CLARAS</option>
+                <option>UBS ALVORADA</option>
+                <option>UBS ATLANTICO</option>
+                <option>UBS CENTRO</option>
+                <option>UBS DONA AMÉLIA</option>
+                <option>UBS JACUTINGA</option>
+                <option>UBS JARDIM IPORÃ</option>
+                <option>UBS MORADA DOS NOBRES</option>
+                <option>UBS NOSSA SENHORA APARECIDA</option>
+                <option>UBS PEDRO PERRI</option>
+                <option>UBS PLANALTO</option>
+                <option>UBS PRATA</option>
+                <option>UBS SAO JOSE</option>
+                <option>UBS SÃO VICENTE</option>
+                <option>UBS TAVEIRA</option>
+                <option>UBS TURRINE</option>
+                <option>UBS TV</option>
+                <option>UBS UMUARAMA</option>
+                <option>UBS UMUARAMA II</option>
+              </optgroup>
+              <optgroup label="Pronto Socorro">
+                <option>PRONTO SOCORRO AIDA VANZO DOLCE</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <div class="sec">Preceptor</div>
+
+        <div class="field">
+          <label>Nº Preceptor</label>
+          <input class="input" type="text" id="numPrec"
+            placeholder="Digite o número"
+            oninput="onNumPrecInput()"
+            inputmode="numeric" maxlength="8" autocomplete="off">
+        </div>
+
+        <div class="ac-banner" id="acBanner">
+          ✦ Campos sugeridos com base em lançamentos anteriores — edite se necessário
+        </div>
+
+        <div class="field">
+          <label>Nome do Preceptor <span class="hint-tag" id="tNome">✦ sugerido</span></label>
+          <input class="input" type="text" id="nomePrec" placeholder="Nome completo"
+            onfocus="markEdited(this)">
+        </div>
+
+        <div class="field">
+          <label>Instituição de Ensino <span class="hint-tag" id="tInst">✦ sugerido</span></label>
+          <div class="select-wrap">
+            <select class="select" id="selInst" onfocus="markEdited(this)">
+              <option value="">Selecione...</option>
+              <option>Centro Universitário Planalto do Distrito Federal (UNIPLAN)</option>
+              <option>Colégio Impacto Araçatuba</option>
+              <option>Instituto Educacional de Araçatuba (IEA)</option>
+              <option>NR Educacional</option>
+              <option>SENAC Araçatuba</option>
+              <option>UniSALESIANO Araçatuba</option>
+              <option>Universidade Paulista (UNIP)</option>
+              <option>Unitoledo — WYDEN</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Curso <span class="hint-tag" id="tCurso">✦ sugerido</span></label>
+          <div class="select-wrap">
+            <select class="select" id="selCurso" onfocus="markEdited(this)">
+              <option value="">Selecione...</option>
+              <option>Auxiliar de Enfermagem</option>
+              <option>Enfermagem</option>
+              <option>Técnico em Enfermagem</option>
+              <option>Medicina</option>
+              <option>Psicologia</option>
+              <option>Serviço Social</option>
+              <option>Biomedicina</option>
+              <option>Fisioterapia</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ALUNOS -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#E8F0FB">🎓</div>
+        <div><h2>Alunos — Entrada</h2><p>Até 15 alunos por lançamento</p></div>
+      </div>
+      <div class="card-body">
+        <div class="counter">
+          <span>Alunos adicionados</span>
+          <span id="counterVal">1 / 15</span>
+        </div>
+        <div id="alunosList"></div>
+        <button class="btn btn-add" id="btnAdd" onclick="addAluno()">＋ Adicionar outro aluno</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btnEnviar" onclick="enviar()">Registrar Entrada</button>
+    <div style="height:24px"></div>
+  </div>
+
+  <!-- ========== SAÍDA ========== -->
+  <div class="view" id="view-saida">
+
+    <div id="semSessao" style="display:none;">
+      <div class="card"><div class="card-body">
+        <div class="no-session">
+          <div class="no-session-icon">🔍</div>
+          <h3>Nenhuma sessão ativa</h3>
+          <p>Faça um lançamento de entrada primeiro. O app vai lembrar sua unidade e preceptor automaticamente.</p>
+          <button class="btn-go" onclick="switchTab('entrada')">✏️ Ir para Entrada</button>
+        </div>
+      </div></div>
+    </div>
+
+    <div id="comSessao" style="display:none;">
+      <div class="session-card">
+        <div class="session-top">
+          <div>
+            <div class="session-label">Sessão atual</div>
+            <div class="session-value" id="sessaoUnidade">—</div>
+          </div>
+          <button class="session-change" onclick="abrirModal()">Alterar</button>
+        </div>
+        <div class="session-divider"></div>
+        <div class="session-row">
+          <div class="session-pill">
+            <div class="session-label">Preceptor nº</div>
+            <div class="session-value" id="sessaoNum" style="font-size:14px">—</div>
+          </div>
+          <div class="session-pill" style="flex:2">
+            <div class="session-label">Nome</div>
+            <div class="session-value" id="sessaoNome" style="font-size:13px;font-weight:500">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background:#FFF4E5">⏱️</div>
+          <div><h2>Alunos Pendentes</h2><p>Sem saída registrada hoje</p></div>
+        </div>
+        <div class="card-body">
+          <div class="info-strip" id="infoStrip">🔍 Buscando pendentes...</div>
+          <div class="sa-row">
+            <button class="sa-btn" onclick="selAll()">Selecionar todos</button>
+            <span class="sa-date" id="saDate"></span>
+          </div>
+          <div id="pendList"></div>
+          <div class="bulk" id="bulkPanel">
+            <div class="bulk-top">
+              <span>⏰ Hora de saída</span>
+              <span id="bulkCount">0 selecionados</span>
+            </div>
+            <div class="bulk-row">
+              <input class="input" type="time" id="horaSaida">
+              <button class="btn btn-saida" id="btnSaida" onclick="darSaida()" disabled>Confirmar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:24px"></div>
+  </div>
+</div>
+
+<!-- MODAL SESSÃO -->
+<div class="overlay" id="overlay" onclick="fecharModal(event)">
+  <div class="modal">
+    <h3>Alterar sessão</h3>
+    <p>Define qual unidade/preceptor aparece na tela de Saída</p>
+    <div class="modal-field">
+      <label>Unidade</label>
+      <div class="select-wrap">
+        <select class="select" id="modalUnidade">
+          <option value="">Selecione...</option>
+          <optgroup label="CAPS">
+            <option>CAPS INFANTIL — AUXILIO</option>
+            <option>CAPS II — NORTE</option>
+            <option>CAPS III — ADULTO</option>
+            <option>CAPS AD III — PSICOSSOCIAL</option>
+          </optgroup>
+          <optgroup label="UBS">
+            <option>UBS ÁGUA LIMPA</option>
+            <option>UBS AGUAS CLARAS</option>
+            <option>UBS ALVORADA</option>
+            <option>UBS ATLANTICO</option>
+            <option>UBS CENTRO</option>
+            <option>UBS DONA AMÉLIA</option>
+            <option>UBS JACUTINGA</option>
+            <option>UBS JARDIM IPORÃ</option>
+            <option>UBS MORADA DOS NOBRES</option>
+            <option>UBS NOSSA SENHORA APARECIDA</option>
+            <option>UBS PEDRO PERRI</option>
+            <option>UBS PLANALTO</option>
+            <option>UBS PRATA</option>
+            <option>UBS SAO JOSE</option>
+            <option>UBS SÃO VICENTE</option>
+            <option>UBS TAVEIRA</option>
+            <option>UBS TURRINE</option>
+            <option>UBS TV</option>
+            <option>UBS UMUARAMA</option>
+            <option>UBS UMUARAMA II</option>
+          </optgroup>
+          <optgroup label="Pronto Socorro">
+            <option>PRONTO SOCORRO AIDA VANZO DOLCE</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>Nº Preceptor</label>
+      <input class="input" type="text" id="modalNum" placeholder="Ex: 1042" inputmode="numeric" maxlength="8">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarSessao()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastEl"></div>
+
+<script>
+// ============================================================
+// CONFIGURAÇÃO — substitua pela URL do seu Web App
+// ============================================================
+const API = 'https://script.google.com/macros/s/AKfycbx5ZdO7V4yEwU7xivESS-pOb9q_v0djof-c9ebY50n2QFFn5Mj0_m2wXRc5Thddj7HS/exec';
+
+// ============================================================
+// ESTADO
+// ============================================================
+let nAlunos   = 1;
+let pendentes = [];
+let sessao    = { unidade: '', num: '', nome: '' };
+let precTimer = null; // debounce do autocomplete
+
+// ============================================================
+// COOKIE
+// ============================================================
+function setCookie(k, v) {
+  const d = new Date(); d.setTime(d.getTime() + 86400000);
+  document.cookie = `${k}=${encodeURIComponent(v)};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+}
+function getCookie(k) {
+  const c = document.cookie.split(';').map(x=>x.trim()).find(x=>x.startsWith(k+'='));
+  return c ? decodeURIComponent(c.split('=')[1]) : '';
+}
+function salvarSessao(u, n, nome) {
+  sessao = { unidade: u, num: n, nome };
+  setCookie('ubs_u', u); setCookie('ubs_n', n); setCookie('ubs_nome', nome);
+}
+function carregarSessao() {
+  sessao = { unidade: getCookie('ubs_u'), num: getCookie('ubs_n'), nome: getCookie('ubs_nome') };
+}
+
+// ============================================================
+// FETCH HELPERS
+// ============================================================
+async function apiGet(params) {
+  const url = API + '?' + new URLSearchParams(params);
+  const res = await fetch(url, { redirect: 'follow' });
+  return res.json();
+}
+async function apiPost(action, payload) {
+  const body = new URLSearchParams({ action, payload: JSON.stringify(payload) });
+  const res  = await fetch(API, { method: 'POST', body, redirect: 'follow' });
+  return res.json();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = () => {
+  carregarSessao();
+  renderAlunos();
+  atualizarBadge();
+
+  const n = new Date();
+  document.getElementById('saDate').textContent =
+    n.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
+
+  // Pré-preencher entrada com sessão salva
+  if (sessao.unidade) {
+    const sel = document.getElementById('selUnidade');
+    for (let o of sel.options) if (o.text === sessao.unidade) { sel.value = o.value; break; }
+    atualizarBadge();
+  }
+  if (sessao.num) {
+    document.getElementById('numPrec').value = sessao.num;
+    // Não dispara autocomplete no load — campos vêm do cookie
+  }
+};
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(t) {
+  ['entrada','saida'].forEach(v => {
+    document.getElementById('view-'+v).classList.toggle('active', v===t);
+    document.getElementById('tab-'+v).classList.toggle('active', v===t);
+  });
+  if (t === 'saida') renderSaida();
+}
+
+// ============================================================
+// BADGE HEADER
+// ============================================================
+function atualizarBadge() {
+  const u = sessao.unidade || document.getElementById('selUnidade').value;
+  document.getElementById('badgeUbs').textContent =
+    u ? u.replace(/^UBS |^CAPS |^PRONTO SOCORRO /,'').substring(0,18) : '—';
+}
+
+// ============================================================
+// UNIDADE
+// ============================================================
+function onUnidade() {
+  atualizarBadge();
+  // re-dispara autocomplete se número já preenchido
+  const num = document.getElementById('numPrec').value.trim();
+  if (num.length >= 3) buscarPreceptor();
+}
+
+// ============================================================
+// AUTOCOMPLETE PRECEPTOR (com debounce 600ms)
+// ============================================================
+function onNumPrecInput() {
+  clearTimeout(precTimer);
+  const num = document.getElementById('numPrec').value.trim();
+  if (num.length < 3) { limparSugestaoPrec(); return; }
+  precTimer = setTimeout(buscarPreceptor, 600);
+}
+
+async function buscarPreceptor() {
+  const unidade = document.getElementById('selUnidade').value;
+  const num     = document.getElementById('numPrec').value.trim();
+  if (!unidade || !num) return;
+
+  // Indicador de loading no campo nome
+  const nomeEl = document.getElementById('nomePrec');
+  nomeEl.parentElement.classList.add('field-loading');
+
+  try {
+    const res = await apiGet({ action: 'autocomplete_preceptor', unidade, num });
+    if (res.ok) {
+      softFill('nomePrec', res.nome);
+      softSel('selInst',   res.inst);
+      softSel('selCurso',  res.curso);
+      ['tNome','tInst','tCurso'].forEach(id => document.getElementById(id).classList.add('show'));
+      document.getElementById('acBanner').classList.add('show');
+    } else {
+      limparSugestaoPrec();
+    }
+  } catch(e) {
+    toast('Erro ao buscar preceptor', 'err');
+  } finally {
+    nomeEl.parentElement.classList.remove('field-loading');
+  }
+}
+
+function limparSugestaoPrec() {
+  document.getElementById('acBanner').classList.remove('show');
+  ['tNome','tInst','tCurso'].forEach(id => document.getElementById(id).classList.remove('show'));
+}
+
+function softFill(id, val) {
+  const el = document.getElementById(id);
+  if (!el.dataset.edited) { el.value = val; el.classList.add('soft'); }
+}
+function softSel(id, val) {
+  const el = document.getElementById(id);
+  if (!el.dataset.edited) {
+    for (let o of el.options) if (o.text === val) { el.value = o.value; break; }
+    el.classList.add('soft');
+  }
+}
+function markEdited(el) {
+  el.dataset.edited = '1';
+  el.classList.remove('soft');
+}
+
+// ============================================================
+// ALUNOS
+// ============================================================
+function todayStr() {
+  const n = new Date(), p = v => String(v).padStart(2,'0');
+  return `${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())}`;
+}
+
+function renderAlunos() {
+  const list = document.getElementById('alunosList');
+  list.innerHTML = '';
+  for (let i = 1; i <= nAlunos; i++) {
+    list.innerHTML += `
+      <div class="aluno-block" id="ab${i}">
+        <div class="aluno-num">${i}</div>
+        ${nAlunos > 1 ? `<button class="aluno-remove" onclick="remAluno()">✕</button>` : ''}
+        <div class="field">
+          <label>RA / Matrícula</label>
+          <input class="input" type="text" id="ra${i}"
+            placeholder="Digite o RA"
+            oninput="onRAInput(${i})"
+            inputmode="numeric" maxlength="12" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Nome do Aluno
+            <span class="hint-tag" id="tAl${i}">✦ sugerido</span>
+          </label>
+          <input class="input" type="text" id="nm${i}"
+            placeholder="Nome completo"
+            onfocus="markEdited(this)">
+        </div>
+        <div class="field">
+          <label>Data e Hora de Entrada</label>
+          <input class="input" type="datetime-local" id="dt${i}" min="${todayStr()}T00:00">
+        </div>
+      </div>`;
+  }
+  document.getElementById('counterVal').textContent = `${nAlunos} / 15`;
+  document.getElementById('btnAdd').disabled = nAlunos >= 15;
+}
+
+let raTimers = {};
+function onRAInput(i) {
+  clearTimeout(raTimers[i]);
+  const ra = document.getElementById(`ra${i}`).value.trim();
+  if (ra.length < 3) {
+    const nmEl = document.getElementById(`nm${i}`);
+    if (!nmEl.dataset.edited) { nmEl.value = ''; nmEl.classList.remove('soft'); }
+    document.getElementById(`tAl${i}`).classList.remove('show');
+    return;
+  }
+  raTimers[i] = setTimeout(() => buscarAluno(i), 600);
+}
+
+async function buscarAluno(i) {
+  const unidade = document.getElementById('selUnidade').value;
+  const num     = document.getElementById('numPrec').value.trim();
+  const ra      = document.getElementById(`ra${i}`).value.trim();
+  const nmEl    = document.getElementById(`nm${i}`);
+  const tag     = document.getElementById(`tAl${i}`);
+
+  try {
+    const res = await apiGet({ action: 'autocomplete_aluno', ra, unidade, num });
+    if (res.ok && !nmEl.dataset.edited) {
+      nmEl.value = res.nome;
+      nmEl.classList.add('soft');
+      tag.classList.add('show');
+    }
+  } catch(e) { /* silencioso — campo fica em branco */ }
+}
+
+function addAluno() { if (nAlunos < 15) { nAlunos++; renderAlunos(); } }
+function remAluno() { if (nAlunos > 1)  { nAlunos--; renderAlunos(); } }
+
+// ============================================================
+// ENVIAR ENTRADA
+// ============================================================
+async function enviar() {
+  const unidade = document.getElementById('selUnidade').value;
+  const num     = document.getElementById('numPrec').value.trim();
+  const nome    = document.getElementById('nomePrec').value.trim();
+  const inst    = document.getElementById('selInst').value;
+  const curso   = document.getElementById('selCurso').value;
+
+  if (!unidade) { toast('Selecione a unidade', 'warn'); return; }
+  if (!num)     { toast('Informe o Nº do Preceptor', 'warn'); return; }
+
+  // Coleta alunos
+  const alunos = [];
+  for (let i = 1; i <= nAlunos; i++) {
+    const ra   = document.getElementById(`ra${i}`).value.trim();
+    const nmAl = document.getElementById(`nm${i}`).value.trim();
+    const dt   = document.getElementById(`dt${i}`).value;
+    if (!ra || !nmAl) { toast(`Aluno ${i}: preencha RA e Nome`, 'warn'); return; }
+    alunos.push({ ra, nome: nmAl, dthr_entrada: dt || new Date().toISOString() });
+  }
+
+  const btn = document.getElementById('btnEnviar');
+  btn.innerHTML = '<span class="spin"></span> Enviando...';
+  btn.disabled = true;
+
+  try {
+    const res = await apiPost('registrar_entrada', {
+      unidade, num_preceptor: num, nome_preceptor: nome,
+      inst_ensino: inst, curso, alunos
+    });
+
+    if (res.ok) {
+      salvarSessao(unidade, num, nome);
+      atualizarBadge();
+      toast(`✅ ${res.registros_criados} aluno(s) registrado(s)!`, 'ok');
+      // Limpa campos dos alunos
+      nAlunos = 1; renderAlunos();
+    } else {
+      toast('Erro: ' + res.erro, 'err');
+    }
+  } catch(e) {
+    toast('Falha na conexão com o servidor', 'err');
+  } finally {
+    btn.innerHTML = 'Registrar Entrada';
+    btn.disabled = false;
+  }
+}
+
+// ============================================================
+// SAÍDA
+// ============================================================
+function renderSaida() {
+  const tem = !!(sessao.unidade && sessao.num);
+  document.getElementById('semSessao').style.display = tem ? 'none'  : 'block';
+  document.getElementById('comSessao').style.display = tem ? 'block' : 'none';
+  if (!tem) return;
+
+  document.getElementById('sessaoUnidade').textContent = sessao.unidade;
+  document.getElementById('sessaoNum').textContent     = sessao.num;
+  document.getElementById('sessaoNome').textContent    = sessao.nome || '—';
+  carregarPendentes();
+}
+
+async function carregarPendentes() {
+  document.getElementById('infoStrip').textContent = '🔄 Buscando pendentes...';
+  document.getElementById('pendList').innerHTML = '';
+
+  const hoje = todayStr();
+  try {
+    const res = await apiGet({
+      action: 'pendentes',
+      unidade: sessao.unidade,
+      num:     sessao.num,
+      data:    hoje
+    });
+
+    if (res.ok) {
+      pendentes = res.pendentes.map(p => ({ ...p, sel: false }));
+      const n = pendentes.length;
+      document.getElementById('infoStrip').textContent =
+        n ? `🔍 ${n} aluno(s) sem saída registrada hoje` : '✅ Nenhum pendente hoje';
+      atualizarBadgePend();
+      renderPend();
+    } else {
+      document.getElementById('infoStrip').textContent = '⚠️ Erro ao buscar pendentes';
+    }
+  } catch(e) {
+    document.getElementById('infoStrip').textContent = '⚠️ Falha na conexão';
+  }
+}
+
+function renderPend() {
+  const list = document.getElementById('pendList');
+  if (!pendentes.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🎉</div><h3>Tudo em dia!</h3><p>Nenhum aluno com saída pendente hoje</p></div>`;
+    updBulk(); return;
+  }
+  list.innerHTML = pendentes.map(p => `
+    <div class="pend-item ${p.sel?'sel':''}" onclick="togPend('${p.id_registro}')">
+      <div class="chk">${p.sel?'✓':''}</div>
+      <div class="pend-info">
+        <div class="pend-nome">${p.nome}</div>
+        <div class="pend-ra">${p.ra}</div>
+      </div>
+      <div class="pend-hora">⏵ ${p.hora_entrada}</div>
+    </div>`).join('');
+  updBulk();
+}
+
+function togPend(id) {
+  pendentes = pendentes.map(p => p.id_registro === id ? {...p, sel: !p.sel} : p);
+  renderPend();
+}
+function selAll() {
+  const all = pendentes.every(p => p.sel);
+  pendentes = pendentes.map(p => ({...p, sel: !all}));
+  renderPend();
+}
+function updBulk() {
+  const n = pendentes.filter(p => p.sel).length;
+  document.getElementById('bulkCount').textContent = `${n} selecionado(s)`;
+  document.getElementById('bulkPanel').classList.toggle('on', n > 0);
+  document.getElementById('btnSaida').disabled = n === 0;
+}
+function atualizarBadgePend() {
+  const el = document.getElementById('badgePend');
+  const n  = pendentes.length;
+  el.textContent = n || '';
+  el.classList.toggle('show', n > 0);
+}
+
+async function darSaida() {
+  const hora = document.getElementById('horaSaida').value;
+  if (!hora) { toast('Informe a hora de saída', 'warn'); return; }
+
+  const selecionados = pendentes.filter(p => p.sel);
+  const ids = selecionados.map(p => p.id_registro);
+  const dtSaida = todayStr() + 'T' + hora;
+
+  const btn = document.getElementById('btnSaida');
+  btn.innerHTML = '<span class="spin"></span>'; btn.disabled = true;
+
+  try {
+    const res = await apiPost('registrar_saida', { ids_registro: ids, dthr_saida: dtSaida });
+    if (res.ok) {
+      pendentes = pendentes.filter(p => !p.sel);
+      atualizarBadgePend();
+      document.getElementById('horaSaida').value = '';
+      renderPend();
+      const n = res.atualizados;
+      document.getElementById('infoStrip').textContent =
+        pendentes.length ? `🔍 ${pendentes.length} aluno(s) sem saída registrada hoje` : '✅ Nenhum pendente hoje';
+      toast(`✅ Saída de ${n} aluno(s) registrada!`, 'ok');
+    } else {
+      toast('Erro: ' + res.erro, 'err');
+    }
+  } catch(e) {
+    toast('Falha na conexão com o servidor', 'err');
+  } finally {
+    btn.innerHTML = 'Confirmar'; btn.disabled = false;
+  }
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function abrirModal() {
+  const overlay = document.getElementById('overlay');
+  overlay.classList.add('show');
+  const sel = document.getElementById('modalUnidade');
+  if (sessao.unidade) for (let o of sel.options) if (o.text === sessao.unidade) { sel.value = o.value; break; }
+  document.getElementById('modalNum').value = sessao.num || '';
+}
+function fecharModal(e) {
+  if (!e || e.target === document.getElementById('overlay'))
+    document.getElementById('overlay').classList.remove('show');
+}
+async function confirmarSessao() {
+  const u = document.getElementById('modalUnidade').value;
+  const n = document.getElementById('modalNum').value.trim();
+  if (!u || !n) { toast('Preencha unidade e número', 'warn'); return; }
+
+  // Busca nome do preceptor para salvar na sessão
+  let nome = '';
+  try {
+    const res = await apiGet({ action: 'autocomplete_preceptor', unidade: u, num: n });
+    if (res.ok) nome = res.nome;
+  } catch(e) {}
+
+  salvarSessao(u, n, nome);
+  document.getElementById('overlay').classList.remove('show');
+  atualizarBadge();
+  renderSaida();
+  toast('✦ Sessão atualizada', 'ok');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, tipo = '') {
+  const t = document.getElementById('toastEl');
+  t.textContent = msg; t.className = `toast ${tipo}`;
+  void t.offsetWidth; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>
