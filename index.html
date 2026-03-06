@@ -426,7 +426,7 @@
 // ============================================================
 // CONFIGURAÇÃO — substitua pela URL do seu Web App
 // ============================================================
-const API = 'https://script.google.com/macros/s/AKfycbwB0xSCwypffGD8sjkSnqu7gndt8K4QKh8AyF0FNnULgeV7TAbtnRnhGbcE0CmGYLxv/exec';
+const API = 'https://script.google.com/macros/s/AKfycbx5ZdO7V4yEwU7xivESS-pOb9q_v0djof-c9ebY50n2QFFn5Mj0_m2wXRc5Thddj7HS/exec';
 
 // ============================================================
 // ESTADO
@@ -589,32 +589,59 @@ function todayStr() {
   return `${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())}`;
 }
 
+// Estado dos alunos preservado entre re-renders
+let alunosState = [{ ra:'', nome:'', dt: todayStr()+'T', edited: false, soft: false }];
+
+function syncStateFromDOM() {
+  for (let i = 0; i < alunosState.length; i++) {
+    const idx = i + 1;
+    const raEl = document.getElementById(`ra${idx}`);
+    const nmEl = document.getElementById(`nm${idx}`);
+    const dtEl = document.getElementById(`dt${idx}`);
+    if (!raEl) continue;
+    alunosState[i].ra     = raEl.value;
+    alunosState[i].nome   = nmEl.value;
+    alunosState[i].dt     = dtEl.value;
+    alunosState[i].edited = !!nmEl.dataset.edited;
+    alunosState[i].soft   = nmEl.classList.contains('soft');
+  }
+}
+
 function renderAlunos() {
   const list = document.getElementById('alunosList');
+  // Garante que state tem entradas para todos os alunos
+  while (alunosState.length < nAlunos) {
+    alunosState.push({ ra:'', nome:'', dt: todayStr()+'T', edited: false, soft: false });
+  }
   list.innerHTML = '';
   for (let i = 1; i <= nAlunos; i++) {
+    const s = alunosState[i-1];
     list.innerHTML += `
       <div class="aluno-block" id="ab${i}">
         <div class="aluno-num">${i}</div>
-        ${nAlunos > 1 ? `<button class="aluno-remove" onclick="remAluno()">✕</button>` : ''}
+        ${nAlunos > 1 ? `<button class="aluno-remove" onclick="remAluno(${i})">✕</button>` : ''}
         <div class="field">
           <label>RA / Matrícula</label>
           <input class="input" type="text" id="ra${i}"
             placeholder="Digite o RA"
             oninput="onRAInput(${i})"
-            inputmode="numeric" maxlength="12" autocomplete="off">
+            inputmode="numeric" maxlength="12" autocomplete="off"
+            value="${s.ra}">
         </div>
         <div class="field">
           <label>Nome do Aluno
-            <span class="hint-tag" id="tAl${i}">✦ sugerido</span>
+            <span class="hint-tag ${s.soft ? 'show' : ''}" id="tAl${i}">✦ sugerido</span>
           </label>
-          <input class="input" type="text" id="nm${i}"
+          <input class="input ${s.soft ? 'soft' : ''}" type="text" id="nm${i}"
             placeholder="Nome completo"
-            onfocus="markEdited(this)">
+            onfocus="markEdited(this)"
+            value="${s.nome.replace(/"/g,'&quot;')}"
+            ${s.edited ? 'data-edited="1"' : ''}>
         </div>
         <div class="field">
           <label>Data e Hora de Entrada</label>
-          <input class="input" type="datetime-local" id="dt${i}" min="${todayStr()}T00:00">
+          <input class="input" type="datetime-local" id="dt${i}"
+            value="${s.dt}">
         </div>
       </div>`;
   }
@@ -624,12 +651,20 @@ function renderAlunos() {
 
 let raTimers = {};
 function onRAInput(i) {
+  syncStateFromDOM();
   clearTimeout(raTimers[i]);
   const ra = document.getElementById(`ra${i}`).value.trim();
+  alunosState[i-1].ra = ra;
   if (ra.length < 3) {
     const nmEl = document.getElementById(`nm${i}`);
-    if (!nmEl.dataset.edited) { nmEl.value = ''; nmEl.classList.remove('soft'); }
+    if (!nmEl.dataset.edited) {
+      nmEl.value = '';
+      nmEl.classList.remove('soft');
+      alunosState[i-1].nome = '';
+      alunosState[i-1].soft = false;
+    }
     document.getElementById(`tAl${i}`).classList.remove('show');
+    alunosState[i-1].soft = false;
     return;
   }
   raTimers[i] = setTimeout(() => buscarAluno(i), 600);
@@ -648,12 +683,27 @@ async function buscarAluno(i) {
       nmEl.value = res.nome;
       nmEl.classList.add('soft');
       tag.classList.add('show');
+      alunosState[i-1].nome = res.nome;
+      alunosState[i-1].soft = true;
     }
-  } catch(e) { /* silencioso — campo fica em branco */ }
+  } catch(e) { /* silencioso */ }
 }
 
-function addAluno() { if (nAlunos < 15) { nAlunos++; renderAlunos(); } }
-function remAluno() { if (nAlunos > 1)  { nAlunos--; renderAlunos(); } }
+function addAluno() {
+  if (nAlunos >= 15) return;
+  syncStateFromDOM();
+  nAlunos++;
+  alunosState.push({ ra:'', nome:'', dt: todayStr()+'T', edited: false, soft: false });
+  renderAlunos();
+}
+
+function remAluno(idx) {
+  if (nAlunos <= 1) return;
+  syncStateFromDOM();
+  alunosState.splice(idx-1, 1);
+  nAlunos--;
+  renderAlunos();
+}
 
 // ============================================================
 // ENVIAR ENTRADA
@@ -693,7 +743,7 @@ async function enviar() {
       atualizarBadge();
       toast(`✅ ${res.registros_criados} aluno(s) registrado(s)!`, 'ok');
       // Limpa campos dos alunos
-      nAlunos = 1; renderAlunos();
+      nAlunos = 1; alunosState = [{ ra:'', nome:'', dt: todayStr()+'T', edited: false, soft: false }]; renderAlunos();
     } else {
       toast('Erro: ' + res.erro, 'err');
     }
@@ -727,10 +777,11 @@ async function carregarPendentes() {
   const hoje = todayStr();
   try {
     const res = await apiGet({
-      action: 'pendentes',
+      action:  'pendentes',
       unidade: sessao.unidade,
-      num:     sessao.num,
-      data:    hoje
+      num:     sessao.num
+      // sem filtro de data — mostra todos os pendentes sem saída
+      // independente do dia, para não perder lançamentos de dias anteriores
     });
 
     if (res.ok) {
